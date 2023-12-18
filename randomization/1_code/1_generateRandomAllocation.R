@@ -5,7 +5,7 @@
 # Last modified: 18 December 2023
 # Parent directory is ChargeUp
 # Protocol for allocation sequence generation: 
-# ADA Pathway/Documents/General/Data Collectin/Randomization allocation/Randomization allocation procedure.docx
+# ADA Pathway/Documents/General/Data Collection/Randomization allocation/Randomization allocation procedure.docx
 
 # Load libraries ---------------------------------------------------------------
 library(tidyverse)
