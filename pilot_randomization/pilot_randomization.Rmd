@@ -1,0 +1,194 @@
+---
+title: "ChargeUp Pilot Randomization"
+author: "Nikki Freeman and Marc Peterson"
+date: "28 March 2024"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r, message = FALSE}
+# Load packages
+library(tidyverse)
+
+# Load functions
+source("pilot_randomization_fnxs.R")
+```
+
+Treatment allocation for the ChargeUp Pilot Study (herein "the pilot") will be 
+conducted using a hybrid pragmatic recruitment strategy and a stochastic 
+minimization approach. The rationale and procedures for this approach are 
+detailed in the ChargeUp SharePoint site 
+(/General/Data Collection/Radnomization allocation/Pilot Treatment allocation procedure.docx).
+The study protocol is also available on the ChargeUp SharePoint site in the 
+Protocol directory (/General/Protocol).
+
+# How to use the pilot study treatment allocation code
+
+**Pre-processing**. Some pre-processing steps will need to be done before executing 
+the treatment allocation code for the pilot. This includes:
+
+  * checking for missingness, and 
+  * verifying that each participant has at least Tuesday availability or Thursday availability.
+    
+Additionally, the data will need to be in the format expected by the treatment
+allocation code. The data should be in a dataframe with the following columns:
+
+  * id: a unique identifier for each participant
+  * num: a numeric variable indicating the rank order in which the participant was enrolled
+  * avail_tuesday: a character variable taking values "yes" or "no" indicating whether the participant is available on Tuesday
+  * avail_thursday: a character variable taking values "yes" or "no" indicating whether the participant is available on Thursday
+  * age: the participant's age group (this should NOT be numeric)
+  * gender: a character variable indicating the participant's gender
+  * race: a character variable indicating the participant's race
+  * trt: a character variable indicating the treatment assignment for the participant. The expected values of this variable are:
+      * "tuesday" for those already assigned to the treatment administered on Tuesdays
+      * "thursday" for those already assigned to the treatment administered on Thursdays
+      * "none" for those who have net yet been assigned a treatment
+  * seed: a character variable indicating the seed value used to allocate treatment for each participant. This should be "none" for all participants who have not yet been assigned treatment and should be a character variable consisting of no more than 4 digits for those that have previously been assigned a treatment. 
+
+Here is an example of what the expected data frame should look like.
+
+```{r}
+# Create example data
+enrolled_data <- data.frame(matrix(nrow = 0, ncol = 9))
+names(enrolled_data) <- c("id", "num", "avail_tuesday", "avail_thursday", 
+                          "age", "gender", "race", "trt", "seed") # num is rank order in which the person was enrolled
+enrolled_data[1,] <- c(1, 3, "yes", "yes", "50-59", "F", "white", "tuesday", "1234")
+enrolled_data[2,] <- c(2, 2, "yes", "yes", "40-49", "M", "black", "none", "none")
+enrolled_data[3,] <- c(3, 1, "yes", "yes", "50-59", "F", "white", "none", "none")
+enrolled_data$num <- as.numeric(enrolled_data$num)
+
+enrolled_data
+```
+
+**Executing the treatment allocation code**. The treatment allocation code has two 
+user specified arguments:
+
+  * `enrolled_data`: the data frame with the participant information
+  * `weights`: a vector of length 3 with the weights for the three treatment arms. 
+  The order of the weights is: weight for age, weight for gender, and weight for race. 
+  The default weight is `c(1/3, 1/3, 1/3)`.
+
+The code chunk belows shows how to execute the treatment allocation code.
+
+```{r, echo = TRUE}
+# Excecute the treatment allocation code
+enrolled_data_updated <- allocate_treatments(enrolled_data, weights = c(1/3, 1/3, 1/3))
+
+```
+
+Here is the output from the code chunk above:
+```{r}
+enrolled_data_updated
+
+```
+
+There is one additional function available that you can use to map between calling the treatment "tuesday" and "thursday" and  the actual treatment names. 
+
+```{r, echo = TRUE}
+convertFromDayToTrtName(enrolled_data_updated, tuesday_is_ReCharge = TRUE)
+```
+
+This may be useful or not. Just remember that all of the code is using the "tuesday" and "thursday" convention for the treatment names. This is so you can look at the day availability and the treatment assignment and not need to do mental gymnastics to figure out if the treatment assignment makes sense. On the other hand, it's not exactly what we'll want to put into REDCap. 
+
+**Post-processing**. After the treatment allocation code has been executed, you will want to verify that 
+
+  * For the most part, age, gender, and race are balanced on the margins. This means that the number of females should be roughly the same in each treatment arm, the number of participants in each age group should be roughly the same in each treatment arm, and the number of participants of each race should be roughly the same in each treatment arm. However, we cannot expect the joint distributions to be the same--e.g., it may be balanced on race and gender separately but we may not see balance among Black Men, White Men, Black Women, White Women.
+  * We also want to keep an eye on the number of people allocated to each treatment arm. There is no mechanism in place to make sure that we end up with the same number of people in each treatment arm. However, we do want to make sure that the number of people in each treatment arm is not too different from each other. If we end up with a large imbalance, we will need to pause treatment allocation and assess the situation. 
+  
+  
+**Next steps**. After post-processing, you will need to update REDCap with the treatment assignments and the seeds for each participant. 
+
+# Experiment using the de-identified data 
+
+For this experiment, we are only checking that the treatment allocation code works as expected when used sequentially. Thus we won't subsample from the de-identified data (i.e., we won't try to subsample down to the expected size of the pilot).
+
+```{r, echo = TRUE}
+# Load the de-identified data
+enrolled_data_deidentified <- readxl::read_xlsx("Deidentified CFS ppt list.xlsx", skip = 1)
+
+# Pre-process the deidentified data to look like the expected data
+enrolled_data_deidentified %>%
+  # Rename the balancing covariates
+  rename(age = `What is your age?`,
+         gender = `What is your gender identity?`,
+         race = `What is your race? (Select all that apply)`) %>%
+  select(-`Are you Hispanic or Latino/a?`) %>% # Drop this column
+  # Add patient ids
+  add_column(id = 1:nrow(enrolled_data_deidentified), .before = "age") %>%
+  # Add enrollment order (same as patient id)
+  add_column(num = 1:nrow(enrolled_data_deidentified), .before = "age") %>%
+  # Add treatment assignment
+  add_column(trt = "none") %>%
+  # Add seed column
+  add_column(seed = "none") -> enrolled_data_deidentified
+
+# Augment the deidentified data with day availability
+enrolled_data_deidentified %>%
+  add_column(avail = sample(x = c("tuesday", "thursday", "both"), size = nrow(enrolled_data_deidentified), replace = TRUE), .after = "race") %>%
+  mutate(avail_tuesday = case_when(avail == "tuesday" | avail == "both" ~ "yes",
+                                   TRUE ~ "no"),
+         avail_thursday = case_when(avail == "thursday" | avail == "both" ~ "yes",
+                                    TRUE ~ "no")) %>%
+  select(-avail) -> enrolled_data_deidentified
+
+
+# Execute the code sequentially...
+# Suppose that on the first day, 3 people are eligible for treatment assignment
+test_data <- enrolled_data_deidentified[1:3,]
+# Execute the treatment allocation code
+test_data_updated <- allocate_treatments(test_data, weights = c(1/3, 1/3, 1/3))
+
+# Now suppose that on the second day, 4 people are eligible for treatment assignment
+test_data <- bind_rows(test_data_updated, enrolled_data_deidentified[4:7,])
+# Execute the treatment allocation code
+test_data_updated <- allocate_treatments(test_data, weights = c(1/3, 1/3, 1/3))
+
+# Suppose that on the third day, 2 people are eligible for treatment assignment
+test_data <- bind_rows(test_data_updated, enrolled_data_deidentified[8:9,])
+# Execute the treatment allocation code
+test_data_updated <- allocate_treatments(test_data, weights = c(1/3, 1/3, 1/3))
+
+# Suppose that on the fourth day, 5 people are eligible for treatment assignment
+test_data <- bind_rows(test_data_updated, enrolled_data_deidentified[10:14,])
+# Execute the treatment allocation code
+test_data_updated <- allocate_treatments(test_data, weights = c(1/3, 1/3, 1/3))
+
+# Suppose that on the fifth day, 6 people are eligible for treatment assignment
+test_data <- bind_rows(test_data_updated, enrolled_data_deidentified[15:20,])
+# Execute the treatment allocation code
+test_data_updated <- allocate_treatments(test_data, weights = c(1/3, 1/3, 1/3))
+```
+
+We can check the results to see if the treatment allocation code is working as expected. 
+
+Are the treatment arms balanced?
+```{r}
+test_data_updated %>% group_by(trt) %>% count()
+```
+
+Are the balancing covariates balanced?
+```{r}
+test_data_updated %>% group_by(trt) %>%
+  count(age) %>%
+  pivot_wider(names_from = trt, values_from = n) 
+
+test_data_updated %>% group_by(trt) %>%
+  count(gender) %>%
+  pivot_wider(names_from = trt, values_from = n)
+
+test_data_updated %>% group_by(trt) %>%
+  count(race) %>%
+  pivot_wider(names_from = trt, values_from = n)
+```
+
+
+
+
