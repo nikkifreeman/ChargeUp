@@ -1,9 +1,8 @@
 allocate_treatments <- function(enrolled_data, weights = c(1/3, 1/3, 1/3)){
   # Reproducibility
-  # Marc, if this is just straight up whack, feel free to edit!
-  seed <- sample(1:9999, size = 1) # Generate a 4 digit number to be the seed
-  set.seed(seed) # set the seed
-  enrolled_data$seed[enrolled_data$trt == "none"] <- seed # assign the seed to the participant
+  # Every participant will have a different seed. The seeds are (record_id*5 + 3)
+  enrolled_data$record_id <- as.numeric(enrolled_data$record_id)
+  enrolled_data <- enrolled_data %>% mutate(seed = record_id*5 + 3)
   
   
   # Check to see if there are participants that need a treatment assignment
@@ -13,6 +12,7 @@ allocate_treatments <- function(enrolled_data, weights = c(1/3, 1/3, 1/3)){
   
   # Check if this is the first participant, if the first participant then assign treatment
   if(enrolled_data$trt[enrolled_data$num == 1] == "none"){
+    set.seed(enrolled_data$seed[enrolled_data$num == 1]) # Set the seed for reproducibility
     if(enrolled_data$avail_tuesday[enrolled_data$num == 1] == "yes" & enrolled_data$avail_thursday[enrolled_data$num == 1] == "no"){
       enrolled_data$trt[enrolled_data$num == 1] <- "tuesday"
     } else if(enrolled_data$avail_tuesday[enrolled_data$num == 1] == "no" & enrolled_data$avail_thursday[enrolled_data$num == 1] == "yes"){
@@ -32,6 +32,7 @@ allocate_treatments <- function(enrolled_data, weights = c(1/3, 1/3, 1/3)){
   
   # Assign treatment to the remaining participant(s)
   for(i in nums_need_treat){
+    set.seed(enrolled_data$seed[enrolled_data$num == i])
     if(enrolled_data$avail_tuesday[enrolled_data$num == i] == "yes" & enrolled_data$avail_thursday[enrolled_data$num == i] == "no"){
       enrolled_data$trt[enrolled_data$num == i] <- "tuesday"
     } else if(enrolled_data$avail_tuesday[enrolled_data$num == i] == "no" & enrolled_data$avail_thursday[enrolled_data$num == i] == "yes"){

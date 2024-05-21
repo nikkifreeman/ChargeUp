@@ -40,7 +40,7 @@ the treatment allocation code for the pilot. This includes:
 Additionally, the data will need to be in the format expected by the treatment
 allocation code. The data should be in a dataframe with the following columns:
 
-  * id: a unique identifier for each participant
+  * record_id: a unique identifier for each participant
   * num: a numeric variable indicating the rank order in which the participant was enrolled
   * avail_tuesday: a character variable taking values "yes" or "no" indicating whether the participant is available on Tuesday
   * avail_thursday: a character variable taking values "yes" or "no" indicating whether the participant is available on Thursday
@@ -58,7 +58,7 @@ Here is an example of what the expected data frame should look like.
 ```{r}
 # Create example data
 enrolled_data <- data.frame(matrix(nrow = 0, ncol = 9))
-names(enrolled_data) <- c("id", "num", "avail_tuesday", "avail_thursday", 
+names(enrolled_data) <- c("record_id", "num", "avail_tuesday", "avail_thursday", 
                           "age", "gender", "race", "trt", "seed") # num is rank order in which the person was enrolled
 enrolled_data[1,] <- c(1, 3, "yes", "yes", "50-59", "F", "white", "tuesday", "1234")
 enrolled_data[2,] <- c(2, 2, "yes", "yes", "40-49", "M", "black", "none", "none")
