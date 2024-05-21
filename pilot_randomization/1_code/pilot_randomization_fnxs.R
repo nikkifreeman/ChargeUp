@@ -13,12 +13,12 @@ allocate_treatments <- function(enrolled_data, weights = c(1/3, 1/3, 1/3)){
   # Check if this is the first participant, if the first participant then assign treatment
   if(enrolled_data$trt[enrolled_data$num == 1] == "none"){
     set.seed(enrolled_data$seed[enrolled_data$num == 1]) # Set the seed for reproducibility
-    if(enrolled_data$avail_tuesday[enrolled_data$num == 1] == "yes" & enrolled_data$avail_thursday[enrolled_data$num == 1] == "no"){
-      enrolled_data$trt[enrolled_data$num == 1] <- "tuesday"
-    } else if(enrolled_data$avail_tuesday[enrolled_data$num == 1] == "no" & enrolled_data$avail_thursday[enrolled_data$num == 1] == "yes"){
-      enrolled_data$trt[enrolled_data$num == 1] <- "thursday"
+    if(enrolled_data$avail_monday[enrolled_data$num == 1] == "yes" & enrolled_data$avail_wednesday[enrolled_data$num == 1] == "no"){
+      enrolled_data$trt[enrolled_data$num == 1] <- "monday"
+    } else if(enrolled_data$avail_monday[enrolled_data$num == 1] == "no" & enrolled_data$avail_wednesday[enrolled_data$num == 1] == "yes"){
+      enrolled_data$trt[enrolled_data$num == 1] <- "wednesday"
     } else {
-      enrolled_data$trt[enrolled_data$num == 1] <- sample(c("tuesday", "thursday"), 1, prob = c(0.5, 0.5))
+      enrolled_data$trt[enrolled_data$num == 1] <- sample(c("monday", "wednesday"), 1, prob = c(0.5, 0.5))
     }
   }
   
@@ -33,10 +33,10 @@ allocate_treatments <- function(enrolled_data, weights = c(1/3, 1/3, 1/3)){
   # Assign treatment to the remaining participant(s)
   for(i in nums_need_treat){
     set.seed(enrolled_data$seed[enrolled_data$num == i])
-    if(enrolled_data$avail_tuesday[enrolled_data$num == i] == "yes" & enrolled_data$avail_thursday[enrolled_data$num == i] == "no"){
-      enrolled_data$trt[enrolled_data$num == i] <- "tuesday"
-    } else if(enrolled_data$avail_tuesday[enrolled_data$num == i] == "no" & enrolled_data$avail_thursday[enrolled_data$num == i] == "yes"){
-      enrolled_data$trt[enrolled_data$num == i] <- "thursday"
+    if(enrolled_data$avail_monday[enrolled_data$num == i] == "yes" & enrolled_data$avail_wednesday[enrolled_data$num == i] == "no"){
+      enrolled_data$trt[enrolled_data$num == i] <- "monday"
+    } else if(enrolled_data$avail_monday[enrolled_data$num == i] == "no" & enrolled_data$avail_wednesday[enrolled_data$num == i] == "yes"){
+      enrolled_data$trt[enrolled_data$num == i] <- "wednesday"
     } else {
       enrolled_data$trt[enrolled_data$num == i] <- getTrt_minimization(enrolled_data, i, weights)
     }
@@ -50,41 +50,41 @@ getTrt_minimization <- function(enrolled_data, i, weights){
   sub <- enrolled_data[enrolled_data$num < i, ]
   
   # Calculate the number of participants with features like the ith participant in each of the treatment groups 
-  sub_tuesday <- sub[sub$trt == "tuesday", ]
-  similar_tuesday <- c(sum(sub_tuesday$age == enrolled_data$age[enrolled_data$num == i]), 
-                       sum(sub_tuesday$gender == enrolled_data$gender[enrolled_data$num == i]), 
-                       sum(sub_tuesday$race == enrolled_data$race[enrolled_data$num == i]))
-  sub_thursday <- sub[sub$trt == "thursday", ]
-  similar_thursday <- c(sum(sub_thursday$age == enrolled_data$age[enrolled_data$num == i]), 
-                        sum(sub_thursday$gender == enrolled_data$gender[enrolled_data$num == i]), 
-                        sum(sub_thursday$race == enrolled_data$race[enrolled_data$num == i]))
+  sub_monday <- sub[sub$trt == "monday", ]
+  similar_monday <- c(sum(sub_monday$age == enrolled_data$age[enrolled_data$num == i]), 
+                       sum(sub_monday$gender == enrolled_data$gender[enrolled_data$num == i]), 
+                       sum(sub_monday$race == enrolled_data$race[enrolled_data$num == i]))
+  sub_wednesday <- sub[sub$trt == "wednesday", ]
+  similar_wednesday <- c(sum(sub_wednesday$age == enrolled_data$age[enrolled_data$num == i]), 
+                        sum(sub_wednesday$gender == enrolled_data$gender[enrolled_data$num == i]), 
+                        sum(sub_wednesday$race == enrolled_data$race[enrolled_data$num == i]))
   
   # Calculate the differences between the participants in each treatment group
-  D_tuesday <- (similar_tuesday + 1) - (similar_thursday )
-  D_thursday <- (similar_thursday + 1) - (similar_tuesday )
+  D_monday <- (similar_monday + 1) - (similar_wednesday )
+  D_wednesday <- (similar_wednesday + 1) - (similar_monday )
   
   # Calculate the weighted sum of the squared differences
-  sigma2_tuesday <- sum(weights*(D_tuesday^2))
-  sigma2_thursday <- sum(weights*(D_thursday^2))
+  sigma2_monday <- sum(weights*(D_monday^2))
+  sigma2_wednesday <- sum(weights*(D_wednesday^2))
   
   # Allocate treatment
-  if(sigma2_tuesday < sigma2_thursday){
-    enrolled_data$trt[enrolled_data$num == i] <- "tuesday"
-  } else if(sigma2_tuesday > sigma2_thursday){
-    enrolled_data$trt[enrolled_data$num == i] <- "thursday"
+  if(sigma2_monday < sigma2_wednesday){
+    enrolled_data$trt[enrolled_data$num == i] <- "monday"
+  } else if(sigma2_monday > sigma2_wednesday){
+    enrolled_data$trt[enrolled_data$num == i] <- "wednesday"
   } else {
-    enrolled_data$trt[enrolled_data$num == i] <- sample(c("tuesday", "thursday"), 1)
+    enrolled_data$trt[enrolled_data$num == i] <- sample(c("monday", "wednesday"), 1)
   }
 }
 
 
-convertFromDayToTrtName <- function(enrolled_data, tuesday_is_ReCharge = TRUE){
-  if(tuesday_is_ReCharge == TRUE){
-    enrolled_data$trt[enrolled_data$trt == "tuesday"] <- "ReCharge"
-    enrolled_data$trt[enrolled_data$trt == "thursday"] <- "TakeCharge"
-  } else if(tuesday_is_ReCharge == FALSE){
-    enrolled_data$trt[enrolled_data$trt == "tuesday"] <- "TakeCharge"
-    enrolled_data$trt[enrolled_data$trt == "thursday"] <- "ReCharge"
+convertFromDayToTrtName <- function(enrolled_data, monday_is_ReCharge = TRUE){
+  if(monday_is_ReCharge == TRUE){
+    enrolled_data$trt[enrolled_data$trt == "monday"] <- "ReCharge"
+    enrolled_data$trt[enrolled_data$trt == "wednesday"] <- "TakeCharge"
+  } else if(monday_is_ReCharge == FALSE){
+    enrolled_data$trt[enrolled_data$trt == "monday"] <- "TakeCharge"
+    enrolled_data$trt[enrolled_data$trt == "wednesday"] <- "ReCharge"
   }
   return(enrolled_data)
 }

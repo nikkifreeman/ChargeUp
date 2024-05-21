@@ -35,21 +35,21 @@ Protocol directory (/General/Protocol).
 the treatment allocation code for the pilot. This includes:
 
   * checking for missingness, and 
-  * verifying that each participant has at least Tuesday availability or Thursday availability.
+  * verifying that each participant has at least monday availability or wednesday availability.
     
 Additionally, the data will need to be in the format expected by the treatment
 allocation code. The data should be in a dataframe with the following columns:
 
   * record_id: a unique identifier for each participant
   * num: a numeric variable indicating the rank order in which the participant was enrolled
-  * avail_tuesday: a character variable taking values "yes" or "no" indicating whether the participant is available on Tuesday
-  * avail_thursday: a character variable taking values "yes" or "no" indicating whether the participant is available on Thursday
+  * avail_monday: a character variable taking values "yes" or "no" indicating whether the participant is available on monday
+  * avail_wednesday: a character variable taking values "yes" or "no" indicating whether the participant is available on wednesday
   * age: the participant's age group (this should NOT be numeric)
   * gender: a character variable indicating the participant's gender
   * race: a character variable indicating the participant's race
   * trt: a character variable indicating the treatment assignment for the participant. The expected values of this variable are:
-      * "tuesday" for those already assigned to the treatment administered on Tuesdays
-      * "thursday" for those already assigned to the treatment administered on Thursdays
+      * "monday" for those already assigned to the treatment administered on mondays
+      * "wednesday" for those already assigned to the treatment administered on wednesdays
       * "none" for those who have net yet been assigned a treatment
   * seed: a character variable indicating the seed value used to allocate treatment for each participant. This should be "none" for all participants who have not yet been assigned treatment and should be a character variable consisting of no more than 4 digits for those that have previously been assigned a treatment. 
 
@@ -58,9 +58,9 @@ Here is an example of what the expected data frame should look like.
 ```{r}
 # Create example data
 enrolled_data <- data.frame(matrix(nrow = 0, ncol = 9))
-names(enrolled_data) <- c("record_id", "num", "avail_tuesday", "avail_thursday", 
+names(enrolled_data) <- c("record_id", "num", "avail_monday", "avail_wednesday", 
                           "age", "gender", "race", "trt", "seed") # num is rank order in which the person was enrolled
-enrolled_data[1,] <- c(1, 3, "yes", "yes", "50-59", "F", "white", "tuesday", "1234")
+enrolled_data[1,] <- c(1, 3, "yes", "yes", "50-59", "F", "white", "monday", "1234")
 enrolled_data[2,] <- c(2, 2, "yes", "yes", "40-49", "M", "black", "none", "none")
 enrolled_data[3,] <- c(3, 1, "yes", "yes", "50-59", "F", "white", "none", "none")
 enrolled_data$num <- as.numeric(enrolled_data$num)
@@ -90,13 +90,13 @@ enrolled_data_updated
 
 ```
 
-There is one additional function available that you can use to map between calling the treatment "tuesday" and "thursday" and  the actual treatment names. 
+There is one additional function available that you can use to map between calling the treatment "monday" and "wednesday" and  the actual treatment names. 
 
 ```{r, echo = TRUE}
-convertFromDayToTrtName(enrolled_data_updated, tuesday_is_ReCharge = TRUE)
+convertFromDayToTrtName(enrolled_data_updated, monday_is_ReCharge = TRUE)
 ```
 
-This may be useful or not. Just remember that all of the code is using the "tuesday" and "thursday" convention for the treatment names. This is so you can look at the day availability and the treatment assignment and not need to do mental gymnastics to figure out if the treatment assignment makes sense. On the other hand, it's not exactly what we'll want to put into REDCap. 
+This may be useful or not. Just remember that all of the code is using the "monday" and "wednesday" convention for the treatment names. This is so you can look at the day availability and the treatment assignment and not need to do mental gymnastics to figure out if the treatment assignment makes sense. On the other hand, it's not exactly what we'll want to put into REDCap. 
 
 **Post-processing**. After the treatment allocation code has been executed, you will want to verify that 
 
@@ -132,10 +132,10 @@ enrolled_data_deidentified %>%
 
 # Augment the deidentified data with day availability
 enrolled_data_deidentified %>%
-  add_column(avail = sample(x = c("tuesday", "thursday", "both"), size = nrow(enrolled_data_deidentified), replace = TRUE), .after = "race") %>%
-  mutate(avail_tuesday = case_when(avail == "tuesday" | avail == "both" ~ "yes",
+  add_column(avail = sample(x = c("monday", "wednesday", "both"), size = nrow(enrolled_data_deidentified), replace = TRUE), .after = "race") %>%
+  mutate(avail_monday = case_when(avail == "monday" | avail == "both" ~ "yes",
                                    TRUE ~ "no"),
-         avail_thursday = case_when(avail == "thursday" | avail == "both" ~ "yes",
+         avail_wednesday = case_when(avail == "wednesday" | avail == "both" ~ "yes",
                                     TRUE ~ "no")) %>%
   select(-avail) -> enrolled_data_deidentified
 
