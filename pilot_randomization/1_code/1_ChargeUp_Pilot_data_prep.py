@@ -45,11 +45,10 @@ print('HTTP Status: ' + str(r.status_code))
 
 
 import pandas as pd
-import pandas as pd
 
 df_raw = pd.DataFrame(r.json())
 #print(df_raw)
-df_raw.to_csv('C:/users/marcp/ChargeUp.csv', mode='w+')
+#df_raw.to_csv('C:/users/marcp/ChargeUp.csv', mode='w+')
 
 df_raw = df_raw.drop(columns=['redcap_event_name', 'redcap_survey_identifier'])
 
